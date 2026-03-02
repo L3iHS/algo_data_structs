@@ -1,5 +1,6 @@
 #include "tree.h"
 
+#include <stdio.h>
 #include <stdlib.h>
 
 TreeStatus init_tree(Tree *tree)
@@ -118,5 +119,113 @@ TreeStatus add_child(Tree *tree, Node *parent, int child_value)
         sibling->next_sibling = new_node; // Добавляем нового ребенка в конец списка братьев
     }
 
+    return TREE_OK;
+}
+
+void delete_subtree(Node *node)
+{
+    if (node == NULL)
+    {
+        return;
+    }
+
+    Node *child = node->first_child;
+
+    while (child != NULL)
+    {
+        Node *next_child = child->next_sibling;
+        delete_subtree(child);
+        child = next_child;
+    }
+
+    free(node);
+}
+
+TreeStatus free_tree(Tree *tree)
+{
+    if (tree == NULL)
+    {
+        return TREE_INVALID_ARG;
+    }
+    if (tree->root == NULL)
+    {
+        return TREE_OK;
+    }
+
+    delete_subtree(tree->root);
+    tree->root = NULL;
+    return TREE_OK;
+}
+
+TreeStatus remove_node(Tree *tree, int value)
+{
+    if (tree == NULL)
+    {
+        return TREE_INVALID_ARG;
+    }
+    if (tree->root == NULL)
+    {
+        return TREE_EMPTY;
+    }
+    Node *target = find_node(tree->root, value);
+
+    if (target == NULL)
+    {
+        return TREE_NOT_FOUND;
+    }
+
+    if (target == tree->root)
+    {
+        delete_subtree(tree->root);
+        tree->root = NULL;
+        return TREE_OK;
+    }
+
+    if (target == target->parent->first_child)
+    {
+        target->parent->first_child = target->next_sibling;
+    }
+    else
+    {
+        Node *sibling = target->parent->first_child;
+
+        while (sibling != NULL && sibling->next_sibling != target)
+        {
+            sibling = sibling->next_sibling;
+        }
+
+        if (sibling != NULL)
+        {
+            sibling->next_sibling = target->next_sibling;
+        }
+    }
+
+    target->next_sibling = NULL;
+    delete_subtree(target);
+    return TREE_OK;
+}
+
+static void print_tree_recursive(const Node *node, int depth)
+{
+    if (node == NULL)
+    {
+        return;
+    }
+    for (int i = 0; i < depth; i++)
+    {
+        printf("  ");
+    }
+    printf("%d\n", node->value);
+    print_tree_recursive(node->first_child, depth + 1);
+    print_tree_recursive(node->next_sibling, depth);
+}
+
+TreeStatus print_tree(const Node *node)
+{
+    if (node == NULL)
+    {
+        return TREE_EMPTY;
+    }
+    print_tree_recursive(node, 0);
     return TREE_OK;
 }
