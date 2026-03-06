@@ -229,3 +229,64 @@ TreeStatus print_tree(const Node *node)
     print_tree_recursive(node, 0);
     return TREE_OK;
 }
+
+static TreeStatus helper_find_deepest_nonterminal(const Node *current, int current_depth, int *best_depth, int *best_value, int *found)
+{
+    if (current == NULL)
+    {
+        return TREE_OK;
+    }
+
+    if (current->first_child != NULL) // Нетерминальная вершина
+    {
+        if (current_depth > *best_depth)
+        {
+            *best_depth = current_depth;
+            *best_value = current->value;
+            *found = 1;
+        }
+    }
+
+    TreeStatus status = helper_find_deepest_nonterminal(current->first_child, current_depth + 1, best_depth, best_value, found);
+    if (status != TREE_OK)
+    {
+        return status;
+    }
+
+    return helper_find_deepest_nonterminal(current->next_sibling, current_depth, best_depth, best_value, found);
+}
+
+TreeStatus find_deepest_nonterminal(const Node *node, int *out_value)
+{
+    if (out_value == NULL)
+    {
+        return TREE_INVALID_ARG;
+    }
+
+    if (node == NULL)
+    {
+        return TREE_NO_NONTERMINAL;
+    }
+
+    int best_depth = -1;
+    int best_value = 0;
+    int found = 0;
+
+    TreeStatus status = helper_find_deepest_nonterminal(node, 0, &best_depth, &best_value, &found);
+
+    if (status != TREE_OK)
+    {
+        return status;
+    }
+    
+    if (found == 0)
+    {
+        return TREE_NO_NONTERMINAL;
+    }
+    else
+    {
+        *out_value = best_value;
+    }
+
+    return TREE_OK;
+}
