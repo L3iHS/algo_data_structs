@@ -1,23 +1,14 @@
-main.o: main.c
-	gcc -c main.c
+main.o: src/main.c src/records.h
+	gcc -c src/main.c -o main.o
 
-tree.o: tree.c
-	gcc -c tree.c
+records.o: src/records.c src/records.h
+	gcc -c src/records.c -o records.o
 
-test.o: test.c
-	gcc -c test.c
-
-test: test.o tree.o
-	gcc -o test test.o tree.o
-
-run_test: test
-	./test
-
-all: main.o tree.o
-	gcc -o main main.o tree.o
+all: main.o records.o
+	gcc -o lab2 main.o records.o
 
 run: all
-	./main
+	./lab2
 
 clean:
-	rm -f *.o main test
+	rm -f *.o lab2
