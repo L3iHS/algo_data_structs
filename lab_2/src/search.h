@@ -1,5 +1,5 @@
-#ifndef SEARCH.H
-#define SEARCH .H
+#ifndef SEARCH_H
+#define SEARCH_H
 
 #include "records.h"
 
