@@ -1,5 +1,6 @@
 #include "records.h"
 #include "sort.h"
+#include "search.h"
 
 #include <stdio.h>
 
@@ -18,6 +19,19 @@ int main(void)
     records_print(&records);
 
     insertion_sort(&records);
+
+    int index = binary_search(&records, "banana");
+
+    if (index == -1)
+    {
+        printf("\nКлюч не найден\n");
+    }
+    else
+    {
+        printf("\nНайдено: key = %s, data = %s\n",
+               records.keys[index],
+               records.data[index]);
+    }
 
     printf("\nПосле sort:\n");
     records_print(&records);
