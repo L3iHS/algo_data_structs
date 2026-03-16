@@ -26,9 +26,10 @@ RecordsStatus records_read(Records *records, const char *filename)
     }
 
     int symbol;
+    // Пропускаем остаток строки после count
     do
     {
-        symbol = fgetc(file); // читает по одному символу
+        symbol = fgetc(file);
     } while (symbol != '\n' && symbol != EOF);
 
     records->count = count;
@@ -45,21 +46,26 @@ RecordsStatus records_read(Records *records, const char *filename)
     records->data = malloc(sizeof(records->data[0]) * count);
     if (records->data == NULL)
     {
-        free(records->keys);
-        records->keys = NULL;
+        records_free(records);
         fclose(file);
         return REC_MEMORY_ERROR;
     }
 
+    // Зануляем элементы, чтобы records_free можно было вызывать даже после ошибки
     for (int i = 0; i < count; i++)
     {
+        records->keys[i] = NULL;
+        records->data[i] = NULL;
+    }
 
+    for (int i = 0; i < count; i++)
+    {
         char buffer[256];
 
+        // Считываем ключ
         if (fgets(buffer, sizeof(buffer), file) == NULL)
         {
-            free(records->keys);
-            free(records->data);
+            records_free(records);
             fclose(file);
             return REC_READ_ERROR;
         }
@@ -70,24 +76,21 @@ RecordsStatus records_read(Records *records, const char *filename)
             buffer[length - 1] = '\0';
         }
 
-        length = strlen(buffer);                                // если в конце строке была \n
-        records->keys[i] = malloc(sizeof(char) * (length + 1)); // len + 1 с запасом для \0
+        length = strlen(buffer);
+        records->keys[i] = malloc(sizeof(char) * (length + 1));
         if (records->keys[i] == NULL)
         {
-            free(records->keys);
-            free(records->data);
+            records_free(records);
             fclose(file);
             return REC_MEMORY_ERROR;
         }
 
         strcpy(records->keys[i], buffer);
 
-        // дальше так же для data[i]
+        // Считываем связанные данные
         if (fgets(buffer, sizeof(buffer), file) == NULL)
         {
-            free(records->keys[i]);
-            free(records->keys);
-            free(records->data);
+            records_free(records);
             fclose(file);
             return REC_READ_ERROR;
         }
@@ -102,9 +105,7 @@ RecordsStatus records_read(Records *records, const char *filename)
         records->data[i] = malloc(sizeof(char) * (length + 1));
         if (records->data[i] == NULL)
         {
-            free(records->keys[i]);
-            free(records->keys);
-            free(records->data);
+            records_free(records);
             fclose(file);
             return REC_MEMORY_ERROR;
         }
@@ -138,8 +139,14 @@ void records_free(Records *records)
 
     for (int i = 0; i < records->count; i++)
     {
-        free(records->keys[i]);
-        free(records->data[i]);
+        if (records->keys != NULL)
+        {
+            free(records->keys[i]);
+        }
+        if (records->data != NULL)
+        {
+            free(records->data[i]);
+        }
     }
 
     free(records->keys);
