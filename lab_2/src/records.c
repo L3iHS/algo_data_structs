@@ -5,6 +5,7 @@
 #include <string.h>
 
 RecordsStatus records_read(Records *records, const char *filename)
+/* Читает таблицу из файла в раздельные массивы ключей и данных */
 {
     if (records == NULL || filename == NULL)
     {
@@ -29,7 +30,7 @@ RecordsStatus records_read(Records *records, const char *filename)
     // Пропускаем остаток строки после count
     do
     {
-        symbol = fgetc(file);
+        symbol = fgetc(file); // Один символ из файла
     } while (symbol != '\n' && symbol != EOF);
 
     records->count = count;
@@ -58,28 +59,32 @@ RecordsStatus records_read(Records *records, const char *filename)
         records->data[i] = NULL;
     }
 
+    char *buffer = NULL;    // ИСПРАВИЛ
+    size_t buffer_size = 0; // ИСПРАВИЛ
+    ssize_t line_length;    // ИСПРАВИЛ
+
     for (int i = 0; i < count; i++)
     {
-        char buffer[256];
-
         // Считываем ключ
-        if (fgets(buffer, sizeof(buffer), file) == NULL)
+        line_length = getline(&buffer, &buffer_size, file);
+        if (line_length == -1)
         {
+            free(buffer);
             records_free(records);
             fclose(file);
             return REC_READ_ERROR;
         }
 
-        size_t length = strlen(buffer);
-        if (length > 0 && buffer[length - 1] == '\n')
+        if (line_length > 0 && buffer[line_length - 1] == '\n')
         {
-            buffer[length - 1] = '\0';
+            buffer[line_length - 1] = '\0';
         }
 
-        length = strlen(buffer);
+        size_t length = strlen(buffer);
         records->keys[i] = malloc(sizeof(char) * (length + 1));
         if (records->keys[i] == NULL)
         {
+            free(buffer);
             records_free(records);
             fclose(file);
             return REC_MEMORY_ERROR;
@@ -88,23 +93,25 @@ RecordsStatus records_read(Records *records, const char *filename)
         strcpy(records->keys[i], buffer);
 
         // Считываем связанные данные
-        if (fgets(buffer, sizeof(buffer), file) == NULL)
+        line_length = getline(&buffer, &buffer_size, file);
+        if (line_length == -1)
         {
+            free(buffer);
             records_free(records);
             fclose(file);
             return REC_READ_ERROR;
         }
 
-        length = strlen(buffer);
-        if (length > 0 && buffer[length - 1] == '\n')
+        if (line_length > 0 && buffer[line_length - 1] == '\n')
         {
-            buffer[length - 1] = '\0';
+            buffer[line_length - 1] = '\0';
         }
 
         length = strlen(buffer);
         records->data[i] = malloc(sizeof(char) * (length + 1));
         if (records->data[i] == NULL)
         {
+            free(buffer);
             records_free(records);
             fclose(file);
             return REC_MEMORY_ERROR;
@@ -113,11 +120,13 @@ RecordsStatus records_read(Records *records, const char *filename)
         strcpy(records->data[i], buffer);
     }
 
+    free(buffer);
     fclose(file);
     return REC_OK;
 }
 
 void records_print(const Records *records)
+/* Печатает все записи таблицы */
 {
     if (records == NULL)
     {
@@ -131,6 +140,7 @@ void records_print(const Records *records)
 }
 
 void records_free(Records *records)
+/* Освобождает память, выделенную под таблицу */
 {
     if (records == NULL)
     {

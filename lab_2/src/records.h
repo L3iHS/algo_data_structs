@@ -1,6 +1,7 @@
 #ifndef RECORDS_H
 #define RECORDS_H
 
+// ЗАписи из файла
 typedef struct Records
 {
     int count;

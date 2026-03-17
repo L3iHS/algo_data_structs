@@ -3,6 +3,7 @@
 #include <string.h>
 
 void insertion_sort(Records *records)
+/* Сортирует таблицу методом простой вставки */
 {
     for (int i = 1; i < records->count; i++)
     {
