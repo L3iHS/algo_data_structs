@@ -60,7 +60,7 @@ static long long evaluate_operator(OperatorType op, long long left, long long ri
     }
 }
 
-/* Рекурсивно упрощает дерево выражения */
+/* Рекурсивно упрощает дерево и вычисляет числовые поддеревья */
 ASTNode *transform_expression(ASTNode *node)
 {
     ASTNode *left;
@@ -78,7 +78,7 @@ ASTNode *transform_expression(ASTNode *node)
         return node;
     }
 
-    // упрощаем левое и правое поддерево
+    // Сначала пытаемся свернуть дочерние поддеревья
     node->data.operator_data.left = transform_expression(node->data.operator_data.left);
     node->data.operator_data.right = transform_expression(node->data.operator_data.right);
 
@@ -86,7 +86,7 @@ ASTNode *transform_expression(ASTNode *node)
     right = node->data.operator_data.right;
     op = node->data.operator_data.op;
 
-    // вычисляем узел если оба потомка уже числа
+    // Текущий узел можно вычислить только если оба потомка уже числа
     if (!is_number_node(left) || !is_number_node(right))
     {
         return node;
