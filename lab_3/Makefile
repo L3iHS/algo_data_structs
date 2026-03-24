@@ -1,29 +1,32 @@
-main.o: src/main.c src/records.h
+main.o: src/main.c src/ast.h src/parser.h src/transform.h src/print.h
 	gcc -c src/main.c -o main.o
 
-records.o: src/records.c src/records.h
-	gcc -c src/records.c -o records.o
+ast.o: src/ast.c src/ast.h
+	gcc -c src/ast.c -o ast.o
 
-sort.o: src/sort.c src/sort.h src/records.h
-	gcc -c src/sort.c -o sort.o
+parser.o: src/parser.c src/parser.h src/ast.h
+	gcc -c src/parser.c -o parser.o
 
-search.o: src/search.c src/search.h src/records.h
-	gcc -c src/search.c -o search.o
+transform.o: src/transform.c src/transform.h src/ast.h
+	gcc -c src/transform.c -o transform.o
 
-test.o: tests/test.c src/records.h src/sort.h src/search.h
+print.o: src/print.c src/print.h src/ast.h
+	gcc -c src/print.c -o print.o
+
+test.o: tests/test.c src/ast.h src/parser.h src/transform.h src/print.h
 	gcc -c tests/test.c -o test.o
 
-all: main.o records.o sort.o search.o
-	gcc -o lab2 main.o records.o sort.o search.o
+all: main.o ast.o parser.o transform.o print.o
+	gcc -o lab3 main.o ast.o parser.o transform.o print.o
 
-test: test.o records.o sort.o search.o
-	gcc -o test test.o records.o sort.o search.o
+test: test.o ast.o parser.o transform.o print.o
+	gcc -o test test.o ast.o parser.o transform.o print.o
 
 run: all
-	./lab2
+	./lab3
 
 run_test: test
 	./test
 
 clean:
-	rm -f *.o lab2 test
+	rm -f *.o lab3 test
