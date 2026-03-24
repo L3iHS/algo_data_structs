@@ -15,14 +15,14 @@ int main(void)
     printf("Введите выражение: ");
     if (fgets(input, sizeof(input), stdin) == NULL)
     {
-        fprintf(stderr, "Ошибка чтения выражения.\n");
+        fprintf(stderr, "Ошибка чтения выражения\n");
         return 1;
     }
 
     root = parse_expression(input);
     if (root == NULL)
     {
-        fprintf(stderr, "Ошибка разбора выражения.\n");
+        fprintf(stderr, "Ошибка разбора выражения\n");
         return 1;
     }
 
