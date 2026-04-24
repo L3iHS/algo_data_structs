@@ -16,6 +16,9 @@ test: test.o rb_tree.o
 run: all
 	./lab4 input.txt
 
+run_cli: all
+	./lab4
+
 run_test: test
 	./test
 
