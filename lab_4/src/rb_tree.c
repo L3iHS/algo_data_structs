@@ -247,7 +247,7 @@ static void rb_insert_fixup(RBTree *tree, RBNode *node)
                 node->parent->color = BLACK;
                 uncle->color = BLACK;
                 node->parent->parent->color = RED;
-                node = node->parent->parent;
+                node = node->parent->parent; // если проблема поднимится выше
             }
             else
             {
@@ -266,6 +266,124 @@ static void rb_insert_fixup(RBTree *tree, RBNode *node)
     }
 
     tree->root->color = BLACK;
+}
+
+/* Ищет минимальный узел в поддереве */
+static RBNode *rb_minimum(RBTree *tree, RBNode *node)
+{
+    while (node->left != tree->nil)
+    {
+        node = node->left;
+    }
+
+    return node;
+}
+
+/* Заменяет одно поддерево другим */
+static void rb_transplant(RBTree *tree, RBNode *old_node, RBNode *new_node)
+{
+    if (old_node->parent == tree->nil)
+    {
+        tree->root = new_node;
+    }
+    else if (old_node == old_node->parent->left)
+    {
+        old_node->parent->left = new_node;
+    }
+    else
+    {
+        old_node->parent->right = new_node;
+    }
+
+    new_node->parent = old_node->parent;
+}
+
+/* Балансировка после удаления */
+static void rb_delete_fixup(RBTree *tree, RBNode *node)
+{
+    RBNode *brother;
+
+    while (node != tree->root && node->color == BLACK)
+    {
+        if (node == node->parent->left)
+        {
+            brother = node->parent->right;
+
+            if (brother->color == RED)
+            {
+                // брат красный, превращаем случай в вариант с черным братом
+                brother->color = BLACK;
+                node->parent->color = RED;
+                rb_rotate_left(tree, node->parent);
+                brother = node->parent->right;
+            }
+
+            if (brother->left->color == BLACK && brother->right->color == BLACK)
+            {
+                // у брата нет красных детей, поднимаем проблему выше
+                brother->color = RED;
+                node = node->parent;
+            }
+            else
+            {
+                if (brother->right->color == BLACK)
+                {
+                    // дальний ребенок черный, готовим внешний поворот
+                    // делаем маленький поворот вокруг brother
+                    brother->left->color = BLACK;
+                    brother->color = RED;
+                    rb_rotate_right(tree, brother);
+                    brother = node->parent->right;
+                }
+
+                // делаем большой поворот вокруг родителя
+                brother->color = node->parent->color;
+                node->parent->color = BLACK;
+                brother->right->color = BLACK;
+                rb_rotate_left(tree, node->parent);
+                node = tree->root;
+            }
+        }
+        else
+        {
+            brother = node->parent->left;
+
+            if (brother->color == RED)
+            {
+                // брат красный, превращаем случай в вариант с черным братом
+                brother->color = BLACK;
+                node->parent->color = RED;
+                rb_rotate_right(tree, node->parent);
+                brother = node->parent->left;
+            }
+
+            if (brother->right->color == BLACK && brother->left->color == BLACK)
+            {
+                // у брата нет красных детей, поднимаем проблему выше
+                brother->color = RED;
+                node = node->parent;
+            }
+            else
+            {
+                if (brother->left->color == BLACK)
+                {
+                    // дальний ребенок черный, готовим внешний поворот
+                    brother->right->color = BLACK;
+                    brother->color = RED;
+                    rb_rotate_left(tree, brother);
+                    brother = node->parent->left;
+                }
+
+                brother->color = node->parent->color;
+                node->parent->color = BLACK;
+                brother->left->color = BLACK;
+                rb_rotate_right(tree, node->parent);
+                node = tree->root;
+            }
+        }
+    }
+
+    node->color = BLACK;
 }
 
 /* Добавляет новый ключ или обновляет значение существующего */
@@ -372,4 +490,72 @@ void rb_tree_print(RBTree *tree, FILE *out)
     }
 
     rb_print_node(tree, tree->root, out, 0);
+}
+
+/* Удаляет узел по ключу */
+int rb_tree_delete(RBTree *tree, const char *key)
+{
+    RBNode *node;        // узел который удаляем
+    RBNode *replacement; // узел который заменит successor на его старом месте
+    RBNode *successor;   // минимальный в правом дереве
+    RBColor removed_color;
+
+    if (tree == NULL || !rb_is_valid_key(key))
+    {
+        return 0;
+    }
+
+    node = rb_tree_find(tree, key);
+
+    if (node == NULL)
+    {
+        return 0;
+    }
+
+    successor = node;
+    removed_color = successor->color;
+
+    if (node->left == tree->nil)
+    {
+        replacement = node->right;
+        rb_transplant(tree, node, node->right);
+    }
+    else if (node->right == tree->nil)
+    {
+        replacement = node->left;
+        rb_transplant(tree, node, node->left);
+    }
+    else
+    {
+        successor = rb_minimum(tree, node->right);
+        removed_color = successor->color;
+        replacement = successor->right;
+
+        // если successor сразу правый ребенок node
+        if (successor->parent == node)
+        {
+            replacement->parent = successor;
+        }
+        // иначе если глубже
+        else
+        {
+            rb_transplant(tree, successor, successor->right);
+            successor->right = node->right;
+            successor->right->parent = successor;
+        }
+
+        rb_transplant(tree, node, successor);
+        successor->left = node->left;
+        successor->left->parent = successor;
+        successor->color = node->color;
+    }
+
+    free(node);
+
+    if (removed_color == BLACK)
+    {
+        rb_delete_fixup(tree, replacement);
+    }
+
+    return 1;
 }
