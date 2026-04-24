@@ -1,32 +1,23 @@
-main.o: src/main.c src/ast.h src/parser.h src/transform.h src/print.h
+main.o: src/main.c src/rb_tree.h
 	gcc -c src/main.c -o main.o
 
-ast.o: src/ast.c src/ast.h
-	gcc -c src/ast.c -o ast.o
+rb_tree.o: src/rb_tree.c src/rb_tree.h
+	gcc -c src/rb_tree.c -o rb_tree.o
 
-parser.o: src/parser.c src/parser.h src/ast.h
-	gcc -c src/parser.c -o parser.o
-
-transform.o: src/transform.c src/transform.h src/ast.h
-	gcc -c src/transform.c -o transform.o
-
-print.o: src/print.c src/print.h src/ast.h
-	gcc -c src/print.c -o print.o
-
-test.o: tests/test.c src/ast.h src/parser.h src/transform.h src/print.h
+test.o: tests/test.c src/rb_tree.h
 	gcc -c tests/test.c -o test.o
 
-all: main.o ast.o parser.o transform.o print.o
-	gcc -o lab3 main.o ast.o parser.o transform.o print.o
+all: main.o rb_tree.o
+	gcc -o lab4 main.o rb_tree.o
 
-test: test.o ast.o parser.o transform.o print.o
-	gcc -o test test.o ast.o parser.o transform.o print.o
+test: test.o rb_tree.o
+	gcc -o test test.o rb_tree.o
 
 run: all
-	./lab3
+	./lab4 input.txt
 
 run_test: test
 	./test
 
 clean:
-	rm -f *.o lab3 test
+	rm -f *.o lab4 test
