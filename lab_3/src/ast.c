@@ -2,6 +2,7 @@
 
 #include <stdlib.h>
 
+/* Создает узел с числовым значением */
 ASTNode *ast_create_number(long long value)
 {
     ASTNode *node = malloc(sizeof(ASTNode));
@@ -13,6 +14,7 @@ ASTNode *ast_create_number(long long value)
     return node;
 }
 
+/* Создает узел с переменной */
 ASTNode *ast_create_variable(char name)
 {
     ASTNode *node = malloc(sizeof(ASTNode));
@@ -24,6 +26,7 @@ ASTNode *ast_create_variable(char name)
     return node;
 }
 
+/* Создает узел с бинарной операцией */
 ASTNode *ast_create_operator(OperatorType op, ASTNode *left, ASTNode *right)
 {
     ASTNode *node = malloc(sizeof(ASTNode));
@@ -37,6 +40,7 @@ ASTNode *ast_create_operator(OperatorType op, ASTNode *left, ASTNode *right)
     return node;
 }
 
+/* Освобождает память, занятую деревом */
 void ast_free(ASTNode *node)
 {
     if (node == NULL)

@@ -4,8 +4,6 @@
 #include <stddef.h>
 #include <stdlib.h>
 
-#define MAX_TOKENS 256
-
 typedef enum
 {
     TOKEN_NUMBER,   // число
@@ -25,6 +23,33 @@ typedef struct
         char operator;    // для TOKEN_OPERATOR
     } data;
 } Token;
+
+/* Добавляет токен в динамический массив */
+static int append_token(Token **tokens, int *count, int *capacity, Token token)
+{
+    Token *new_tokens;
+    int new_capacity;
+
+    if (*count < *capacity)
+    {
+        // Если места хватает, просто записываем токен в конец
+        (*tokens)[(*count)++] = token;
+        return 1;
+    }
+
+    // Если массив заполнен, увеличиваем его размер в 2 раза
+    new_capacity = (*capacity == 0) ? 16 : (*capacity * 2);
+    new_tokens = realloc(*tokens, new_capacity * sizeof(Token));
+    if (new_tokens == NULL)
+    {
+        return 0;
+    }
+
+    *tokens = new_tokens;     // сохраняем новый указатель на массив
+    *capacity = new_capacity; // сохраняем новый размер массива
+    (*tokens)[(*count)++] = token;
+    return 1;
+}
 
 static int is_operator_char(char c)
 {
@@ -72,28 +97,27 @@ static int is_right_associative(OperatorType op)
     return op == OP_POWER; // только оператор ^ является правоассоциативным
 }
 
-/* Преобразует входную строку в массив токенов */
-static int tokenize(const char *input, Token *tokens, int max_tokens)
+/* Преобразует входную строку в динамический массив токенов */
+static int tokenize(const char *input, Token **tokens_out, int *count_out)
 {
+    Token *tokens = NULL;
+    int count = 0;
+    int capacity = 0;
     int pos = 0;
-    int token_count = 0;
 
-    if (input == NULL || tokens == NULL || max_tokens <= 0)
+    if (input == NULL || tokens_out == NULL || count_out == NULL)
     {
         return -1;
     }
 
     while (input[pos] != '\0')
     {
+        Token token;
+
         if (isspace((unsigned char)input[pos]))
         {
             pos++; // пропускаем любые пробельные символы
             continue;
-        }
-
-        if (token_count >= max_tokens)
-        {
-            return -1; // не хватило места в массиве токенов
         }
 
         if (isdigit((unsigned char)input[pos]))
@@ -103,61 +127,76 @@ static int tokenize(const char *input, Token *tokens, int max_tokens)
             // Читаем все подряд идущие цифры
             while (isdigit((unsigned char)input[pos]))
             {
-                value = value * 10 + (input[pos] - '0'); // из символа в число наприемр '3' - '0' = 3
+                value = value * 10 + (input[pos] - '0'); // из символа в число например '3' - '0' = 3
                 pos++;
             }
 
-            tokens[token_count].type = TOKEN_NUMBER;
-            tokens[token_count].data.number = value;
-            token_count++;
+            token.type = TOKEN_NUMBER;
+            token.data.number = value;
         }
         else if (isalpha((unsigned char)input[pos]))
         {
-            tokens[token_count].type = TOKEN_VARIABLE;
-            tokens[token_count].data.variable = input[pos];
+            token.type = TOKEN_VARIABLE;
+            token.data.variable = input[pos];
             pos++;
-            token_count++;
         }
         else if (is_operator_char(input[pos]))
         {
             // парсим оператор
-            tokens[token_count].type = TOKEN_OPERATOR;
-            tokens[token_count].data.operator = input[pos];
+            token.type = TOKEN_OPERATOR;
+            token.data.operator = input[pos];
             pos++;
-            token_count++;
         }
         else if (input[pos] == '(')
         {
-            tokens[token_count].type = TOKEN_LPAREN;
+            token.type = TOKEN_LPAREN;
             pos++;
-            token_count++;
         }
         else if (input[pos] == ')')
         {
-            tokens[token_count].type = TOKEN_RPAREN;
+            token.type = TOKEN_RPAREN;
             pos++;
-            token_count++;
         }
         else
         {
             // недопустимый символ
+            free(tokens);
             return -1; // ошибка
+        }
+
+        if (!append_token(&tokens, &count, &capacity, token))
+        {
+            free(tokens);
+            return -1;
         }
     }
 
-    return token_count; // количество токенов
+    *tokens_out = tokens;
+    *count_out = count;
+    return 0;
 }
 
 /* Переводит токены из инфиксной формы в ОПН */
-static int infix_to_rpn(const Token *tokens, int token_count, Token *output, int max_output)
+static int infix_to_rpn(const Token *tokens, int token_count, Token **output_out, int *output_count_out)
 {
-    Token stack[max_output > 0 ? max_output : 1];
+    Token *output;
+    Token *stack;
     int stack_size = 0;
     int output_count = 0;
     int i;
 
-    if (tokens == NULL || output == NULL || token_count < 0 || max_output <= 0)
+    if (tokens == NULL || output_out == NULL || output_count_out == NULL || token_count <= 0)
     {
+        return -1;
+    }
+
+    // для ОПН и стека достаточно буферов размером с число входных токенов
+    output = malloc(token_count * sizeof(Token));
+    stack = malloc(token_count * sizeof(Token));
+    if (output == NULL || stack == NULL)
+    {
+        free(output);
+        free(stack);
         return -1;
     }
 
@@ -168,11 +207,6 @@ static int infix_to_rpn(const Token *tokens, int token_count, Token *output, int
         if (current.type == TOKEN_NUMBER || current.type == TOKEN_VARIABLE)
         {
             // Числа и переменные сразу попадают в выходную последовательность
-            if (output_count >= max_output)
-            {
-                return -1;
-            }
-
             output[output_count++] = current;
         }
         else if (current.type == TOKEN_OPERATOR)
@@ -189,11 +223,6 @@ static int infix_to_rpn(const Token *tokens, int token_count, Token *output, int
                 if (top_priority > current_priority ||
                     (top_priority == current_priority && !is_right_associative(current_op)))
                 {
-                    if (output_count >= max_output)
-                    {
-                        return -1;
-                    }
-
                     // Операторы с большим приоритетом отправляем в выход раньше
                     output[output_count++] = stack[--stack_size];
                 }
@@ -224,21 +253,20 @@ static int infix_to_rpn(const Token *tokens, int token_count, Token *output, int
                     break;
                 }
 
-                if (output_count >= max_output)
-                {
-                    return -1;
-                }
-
                 output[output_count++] = stack[--stack_size];
             }
 
             if (!found_lparen)
             {
+                free(output);
+                free(stack);
                 return -1; // закрывающая скобка без открывающей
             }
         }
         else
         {
+            free(output);
+            free(stack);
             return -1;
         }
     }
@@ -249,33 +277,37 @@ static int infix_to_rpn(const Token *tokens, int token_count, Token *output, int
         if (stack[stack_size - 1].type == TOKEN_LPAREN ||
             stack[stack_size - 1].type == TOKEN_RPAREN)
         {
+            free(output);
+            free(stack);
             return -1; // скобки не согласованы
-        }
-
-        if (output_count >= max_output)
-        {
-            return -1;
         }
 
         output[output_count++] = stack[--stack_size];
     }
 
-    return output_count;
+    free(stack);
+    // Возвращаем готовую ОПН и ее длину
+    *output_out = output;
+    *output_count_out = output_count;
+    return 0;
 }
 
 /* Строит дерево выражения по токенам в ОПН */
 static ASTNode *build_ast_from_rpn(const Token *rpn_tokens, int count)
 {
-    ASTNode *stack[MAX_TOKENS];
+    ASTNode **stack;
     int stack_size = 0;
     int i;
+    ASTNode *result;
 
     if (rpn_tokens == NULL || count <= 0)
     {
         return NULL;
     }
 
-    if (count > MAX_TOKENS)
+    // В худшем случае стек узлов по размеру равен числу токенов ОПН
+    stack = malloc(count * sizeof(ASTNode *));
+    if (stack == NULL)
     {
         return NULL;
     }
@@ -293,6 +325,7 @@ static ASTNode *build_ast_from_rpn(const Token *rpn_tokens, int count)
                 {
                     ast_free(stack[--stack_size]);
                 }
+                free(stack);
                 return NULL;
             }
 
@@ -307,6 +340,7 @@ static ASTNode *build_ast_from_rpn(const Token *rpn_tokens, int count)
                 {
                     ast_free(stack[--stack_size]);
                 }
+                free(stack);
                 return NULL;
             }
 
@@ -317,13 +351,14 @@ static ASTNode *build_ast_from_rpn(const Token *rpn_tokens, int count)
             ASTNode *right;
             ASTNode *left;
 
-            // Для бинарного оператора нужно два операнда в стеке.
+            // Для бинарного оператора нужно два операнда в стеке
             if (stack_size < 2)
             {
                 while (stack_size > 0)
                 {
                     ast_free(stack[--stack_size]);
                 }
+                free(stack);
                 return NULL;
             }
 
@@ -339,18 +374,21 @@ static ASTNode *build_ast_from_rpn(const Token *rpn_tokens, int count)
                 {
                     ast_free(stack[--stack_size]);
                 }
+                free(stack);
                 return NULL;
             }
 
-            // Новый операторный узел снова кладем в стек.
+            // Новый операторный узел снова кладем в стек
             stack[stack_size++] = node;
         }
         else
         {
+            // Если токен некорректен, очищаем уже построенную часть дерева
             while (stack_size > 0)
             {
                 ast_free(stack[--stack_size]);
             }
+            free(stack);
             return NULL;
         }
     }
@@ -361,17 +399,21 @@ static ASTNode *build_ast_from_rpn(const Token *rpn_tokens, int count)
         {
             ast_free(stack[--stack_size]);
         }
+        free(stack);
         return NULL;
     }
 
-    return stack[0];
+    result = stack[0];
+    free(stack);
+    return result;
 }
 
 /* Строит дерево выражения из входной строки */
 ASTNode *parse_expression(const char *input)
 {
-    Token tokens[MAX_TOKENS];
-    Token rpn_tokens[MAX_TOKENS];
+    Token *tokens = NULL;
+    Token *rpn_tokens = NULL;
+    ASTNode *root;
     int token_count;
     int rpn_count;
 
@@ -381,19 +423,25 @@ ASTNode *parse_expression(const char *input)
     }
 
     // Сначала разбиваем строку на токены
-    token_count = tokenize(input, tokens, MAX_TOKENS);
-    if (token_count <= 0)
+    if (tokenize(input, &tokens, &token_count) != 0 || token_count <= 0)
     {
+        free(tokens);
         return NULL;
     }
 
     // Затем переводим токены в обратную польскую нотацию
-    rpn_count = infix_to_rpn(tokens, token_count, rpn_tokens, MAX_TOKENS);
-    if (rpn_count <= 0)
+    if (infix_to_rpn(tokens, token_count, &rpn_tokens, &rpn_count) != 0 || rpn_count <= 0)
     {
+        free(tokens);
+        free(rpn_tokens);
         return NULL;
     }
 
     // По готовой ОПН строим дерево выражения
-    return build_ast_from_rpn(rpn_tokens, rpn_count);
+    root = build_ast_from_rpn(rpn_tokens, rpn_count);
+
+    // Временные массивы токенов больше не нужны
+    free(tokens);
+    free(rpn_tokens);
+    return root;
 }
