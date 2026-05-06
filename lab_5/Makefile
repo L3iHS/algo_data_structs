@@ -1,26 +1,20 @@
-main.o: src/main.c src/rb_tree.h
-	gcc -c src/main.c -o main.o
+main.o: src/main.c src/graph.h src/dijkstra.h
+	gcc -Wall -Wextra -Werror -std=c11 -c src/main.c -o main.o
 
-rb_tree.o: src/rb_tree.c src/rb_tree.h
-	gcc -c src/rb_tree.c -o rb_tree.o
+graph.o: src/graph.c src/graph.h
+	gcc -Wall -Wextra -Werror -std=c11 -c src/graph.c -o graph.o
 
-test.o: tests/test.c src/rb_tree.h
-	gcc -c tests/test.c -o test.o
+dijkstra.o: src/dijkstra.c src/dijkstra.h src/graph.h
+	gcc -Wall -Wextra -Werror -std=c11 -c src/dijkstra.c -o dijkstra.o
 
-all: main.o rb_tree.o
-	gcc -o lab4 main.o rb_tree.o
-
-test: test.o rb_tree.o
-	gcc -o test test.o rb_tree.o
+all: main.o graph.o dijkstra.o
+	gcc -Wall -Wextra -Werror -std=c11 -o lab5 main.o graph.o dijkstra.o
 
 run: all
-	./lab4 input.txt
+	./lab5 input.txt 0 graph_output.txt result_output.txt
 
 run_cli: all
-	./lab4
-
-run_test: test
-	./test
+	./lab5
 
 clean:
-	rm -f *.o lab4 test
+	rm -f *.o lab5 graph_output.txt result_output.txt
