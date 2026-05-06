@@ -17,8 +17,13 @@ typedef struct
 } Graph;
 
 Graph *graph_create(int vertices_count);
+
 void graph_free(Graph *graph);
 
 int graph_add_edge(Graph *graph, int from, int to, int weight);
+
+int graph_save_to_file(const Graph *graph, const char *filename);
+
+Graph *graph_load_from_file(const char *filename);
 
 #endif
