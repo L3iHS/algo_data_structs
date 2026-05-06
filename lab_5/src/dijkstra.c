@@ -1,0 +1,1 @@
+DijkstraResult *dijkstra_run(const Graph *graph, int start_vertex)
