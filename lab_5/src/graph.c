@@ -49,7 +49,7 @@ int graph_add_edge(Graph *graph, int from, int to, int weight)
         to < 0 ||
         from >= graph->vertices_count ||
         to >= graph->vertices_count ||
-        weight < 0)
+        weight < 0) // допустимый диапазон
     {
         return 0;
     }

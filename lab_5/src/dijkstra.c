@@ -53,7 +53,8 @@ DijkstraResult *dijkstra_run(const Graph *graph, int start_vertex)
     {
         int current = -1;
         for (int i = 0; i < graph->vertices_count; i++)
-        {
+        {   
+            // непосещённая вершина с минимальным расстоянием от стартовой вершины
             if (!visited[i] && (current == -1 || result->distances[i] < result->distances[current]))
             {
                 current = i;
